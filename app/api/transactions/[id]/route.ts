@@ -46,7 +46,7 @@ export async function DELETE(
       };
       await supabase
         .from("products")
-        .update(revertUpdate)
+        .update(revertUpdate as any)
         .eq("id", tx.product_id);
     }
 
