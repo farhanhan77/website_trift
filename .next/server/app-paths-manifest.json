@@ -1,0 +1,11 @@
+{
+  "/api/bals/route": "app/api/bals/route.js",
+  "/api/transactions/route": "app/api/transactions/route.js",
+  "/api/products/route": "app/api/products/route.js",
+  "/login/page": "app/login/page.js",
+  "/dashboard/sales/page": "app/dashboard/sales/page.js",
+  "/dashboard/inventory/page": "app/dashboard/inventory/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/analytics/page": "app/dashboard/analytics/page.js",
+  "/dashboard/bal/page": "app/dashboard/bal/page.js"
+}

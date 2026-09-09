@@ -1,0 +1,89 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-inter: 'Inter', system-ui, sans-serif;
+  --font-outfit: 'Outfit', system-ui, sans-serif;
+  --background: #090B0E;
+  --foreground: #F3F4F6;
+  --card-bg: #11141A;
+  --card-border: #1E232F;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-outfit);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0d1017;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #232a3b;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #333d54;
+}
+
+/* Glassmorphism Classes */
+.glass-panel {
+  background: rgba(17, 20, 26, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card {
+  background: rgba(22, 25, 32, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid #1f2533;
+}
+
+.glass-card:hover {
+  border-color: #2e374d;
+}
+
+/* Custom thrift badge glow effects */
+.glow-grade-a {
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.25);
+}
+
+.glow-grade-b {
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.25);
+}
+
+.glow-gold {
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.25);
+}
+
+/* Mobile viewport bottom padding for nav */
+@media (max-width: 768px) {
+  .pb-mobile-nav {
+    padding-bottom: 5.5rem;
+  }
+}
