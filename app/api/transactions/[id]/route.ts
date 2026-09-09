@@ -38,15 +38,14 @@ export async function DELETE(
 
     // Revert produk ke READY jika ini transaksi penjualan
     if (tx.transaction_type === "INCOME_SALE" && tx.product_id) {
-      const revertUpdate: any = {
-        status: "READY",
-        sold_price: null,
-        sold_at: null,
-        updated_at: new Date().toISOString(),
-      };
-      await supabase
+      await (supabase as any)
         .from("products")
-        .update(revertUpdate)
+        .update({
+          status: "READY",
+          sold_price: null,
+          sold_at: null,
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", tx.product_id);
     }
 
