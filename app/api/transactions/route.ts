@@ -7,6 +7,17 @@ function checkAuth(request: NextRequest): boolean {
   return !!cookie?.value;
 }
 
+const sanitizeNull = (val: any) => {
+  if (val === "" || val === undefined || val === null) return null;
+  return typeof val === "string" && val.trim() === "" ? null : val;
+};
+
+const parseNumber = (val: any, fallback: number | null = 0) => {
+  if (val === "" || val === null || val === undefined) return fallback;
+  const num = Number(val);
+  return isNaN(num) ? fallback : num;
+};
+
 // GET /api/transactions — ambil semua transaksi beserta data produk
 export async function GET(request: NextRequest) {
   if (!checkAuth(request)) {
@@ -50,12 +61,12 @@ export async function POST(request: NextRequest) {
       .from("transactions")
       .insert({
         transaction_type: body.transaction_type,
-        product_id: body.product_id ?? null,
-        bal_id: body.bal_id ?? null,
+        product_id: sanitizeNull(body.product_id),
+        bal_id: sanitizeNull(body.bal_id),
         description: body.description,
-        amount: body.amount,
-        net_profit: body.net_profit,
-        transaction_date: body.transaction_date ?? new Date().toISOString(),
+        amount: parseNumber(body.amount, 0),
+        net_profit: parseNumber(body.net_profit, 0),
+        transaction_date: sanitizeNull(body.transaction_date) ?? new Date().toISOString(),
       })
       .select()
       .single();

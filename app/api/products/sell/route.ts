@@ -8,6 +8,17 @@ function checkAuth(request: NextRequest): boolean {
   return !!cookie?.value;
 }
 
+const sanitizeNull = (val: any) => {
+  if (val === "" || val === undefined || val === null) return null;
+  return typeof val === "string" && val.trim() === "" ? null : val;
+};
+
+const parseNumber = (val: any, fallback: number | null = 0) => {
+  if (val === "" || val === null || val === undefined) return fallback;
+  const num = Number(val);
+  return isNaN(num) ? fallback : num;
+};
+
 /**
  * POST /api/products/sell
  * Body: { productId, soldPrice, transactionDate? }
@@ -26,16 +37,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { productId, soldPrice, transactionDate } = body;
 
-    if (!productId || !soldPrice) {
+    const cleanSoldPrice = parseNumber(soldPrice, 0);
+
+    if (!productId || cleanSoldPrice <= 0) {
       return NextResponse.json(
-        { error: "productId dan soldPrice wajib diisi" },
+        { error: "productId dan soldPrice wajib diisi dengan benar" },
         { status: 400 }
       );
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createServerClient() as any;
-    const txDate = transactionDate ?? new Date().toISOString();
+    const txDate = sanitizeNull(transactionDate) ?? new Date().toISOString();
 
     // 1. Fetch produk
     const { data: product, error: fetchErr } = await supabase
@@ -52,14 +65,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Produk sudah terjual" }, { status: 400 });
     }
 
-    const profit = calculateSaleProfit(Number(soldPrice), Number(product.hpp_allocated));
+    const profit = calculateSaleProfit(cleanSoldPrice, Number(product.hpp_allocated));
 
     // 2. Update produk → SOLD
     const { data: updatedProduct, error: updateErr } = await supabase
       .from("products")
       .update({
         status: "SOLD",
-        sold_price: soldPrice,
+        sold_price: cleanSoldPrice,
         sold_at: txDate,
         updated_at: new Date().toISOString(),
       })
@@ -75,9 +88,9 @@ export async function POST(request: NextRequest) {
       .insert({
         transaction_type: "INCOME_SALE",
         product_id: productId,
-        bal_id: product.bal_id ?? null,
+        bal_id: sanitizeNull(product.bal_id),
         description: `Penjualan: ${product.name} (${product.sku})`,
-        amount: soldPrice,
+        amount: cleanSoldPrice,
         net_profit: profit.net_profit,
         transaction_date: txDate,
       })

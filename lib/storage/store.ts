@@ -39,6 +39,17 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+const sanitizeNull = (val: any) => {
+  if (val === "" || val === undefined || val === null) return null;
+  return typeof val === "string" && val.trim() === "" ? null : val;
+};
+
+const parseNumber = (val: any, fallback: number | null = 0) => {
+  if (val === "" || val === null || val === undefined) return fallback;
+  const num = Number(val);
+  return isNaN(num) ? fallback : num;
+};
+
 // ─── Store Class ─────────────────────────────────────────────────────────────
 
 class ThriftStore {
@@ -73,18 +84,44 @@ class ThriftStore {
   }
 
   public async addBal(bal: Omit<Bal, "id" | "created_at">): Promise<Bal> {
+    const payload = {
+      ...bal,
+      bal_code: bal.bal_code,
+      bal_name: bal.bal_name,
+      purchase_price: parseNumber(bal.purchase_price, 0),
+      shipping_cost: parseNumber(bal.shipping_cost, 0),
+      laundry_cost: parseNumber(bal.laundry_cost, 0),
+      packing_cost: parseNumber(bal.packing_cost, 0),
+      total_grade_a_qty: Math.floor(parseNumber(bal.total_grade_a_qty, 0) || 0),
+      total_grade_b_qty: Math.floor(parseNumber(bal.total_grade_b_qty, 0) || 0),
+      total_defective_qty: Math.floor(parseNumber(bal.total_defective_qty, 0) || 0),
+      hpp_per_pcs: parseNumber(bal.hpp_per_pcs, 0),
+      status: bal.status || "ACTIVE",
+      notes: sanitizeNull(bal.notes),
+    };
     const newBal = await apiFetch<Bal>("/api/bals", {
       method: "POST",
-      body: JSON.stringify(bal),
+      body: JSON.stringify(payload),
     });
     this.notify();
     return newBal;
   }
 
   public async updateBal(id: string, updates: Partial<Bal>): Promise<Bal> {
+    const payload: Record<string, any> = { ...updates };
+    if ("purchase_price" in updates) payload.purchase_price = parseNumber(updates.purchase_price, 0);
+    if ("shipping_cost" in updates) payload.shipping_cost = parseNumber(updates.shipping_cost, 0);
+    if ("laundry_cost" in updates) payload.laundry_cost = parseNumber(updates.laundry_cost, 0);
+    if ("packing_cost" in updates) payload.packing_cost = parseNumber(updates.packing_cost, 0);
+    if ("total_grade_a_qty" in updates) payload.total_grade_a_qty = Math.floor(parseNumber(updates.total_grade_a_qty, 0) || 0);
+    if ("total_grade_b_qty" in updates) payload.total_grade_b_qty = Math.floor(parseNumber(updates.total_grade_b_qty, 0) || 0);
+    if ("total_defective_qty" in updates) payload.total_defective_qty = Math.floor(parseNumber(updates.total_defective_qty, 0) || 0);
+    if ("hpp_per_pcs" in updates) payload.hpp_per_pcs = parseNumber(updates.hpp_per_pcs, 0);
+    if ("notes" in updates) payload.notes = sanitizeNull(updates.notes);
+
     const updatedBal = await apiFetch<Bal>(`/api/bals/${id}`, {
       method: "PATCH",
-      body: JSON.stringify(updates),
+      body: JSON.stringify(payload),
     });
     this.notify();
     return updatedBal;
@@ -108,26 +145,42 @@ class ThriftStore {
     return products.find((p) => p.id === id) ?? null;
   }
 
-  async addProduct(productData: any) {
+  public async addProduct(productData: any): Promise<Product> {
     const payload = {
       ...productData,
-      price: productData.price === "" ? null : Number(productData.price),
-      stock: productData.stock === "" ? 0 : Number(productData.stock),
+      bal_id: sanitizeNull(productData.bal_id),
+      photo_url: sanitizeNull(productData.photo_url),
+      notes: sanitizeNull(productData.notes),
+      selling_price: parseNumber(productData.selling_price, 0),
+      hpp_allocated: parseNumber(productData.hpp_allocated, 0),
+      sold_price: parseNumber(productData.sold_price, null),
+      status: productData.status ?? "READY",
     };
 
-    return await apiFetch("/api/products", {
+    const newProduct = await apiFetch<Product>("/api/products", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+    this.notify();
+    return newProduct;
   }
 
   public async updateProduct(
     id: string,
     updates: Partial<Product>
   ): Promise<Product> {
+    const payload: Record<string, any> = { ...updates };
+    if ("bal_id" in updates) payload.bal_id = sanitizeNull(updates.bal_id);
+    if ("photo_url" in updates) payload.photo_url = sanitizeNull(updates.photo_url);
+    if ("notes" in updates) payload.notes = sanitizeNull(updates.notes);
+    if ("selling_price" in updates) payload.selling_price = parseNumber(updates.selling_price, 0);
+    if ("hpp_allocated" in updates) payload.hpp_allocated = parseNumber(updates.hpp_allocated, 0);
+    if ("sold_price" in updates) payload.sold_price = parseNumber(updates.sold_price, null);
+
     const updatedProduct = await apiFetch<Product>(`/api/products/${id}`, {
       method: "PATCH",
-      body: JSON.stringify(updates),
+      body: JSON.stringify(payload),
     });
     this.notify();
     return updatedProduct;
@@ -151,7 +204,11 @@ class ThriftStore {
       "/api/products/sell",
       {
         method: "POST",
-        body: JSON.stringify({ productId, soldPrice, transactionDate }),
+        body: JSON.stringify({
+          productId,
+          soldPrice: parseNumber(soldPrice, 0),
+          transactionDate: sanitizeNull(transactionDate) ?? new Date().toISOString(),
+        }),
       }
     );
     this.notify();
@@ -167,9 +224,17 @@ class ThriftStore {
   public async addTransaction(
     tx: Omit<Transaction, "id" | "created_at">
   ): Promise<Transaction> {
+    const payload = {
+      ...tx,
+      product_id: sanitizeNull(tx.product_id),
+      bal_id: sanitizeNull(tx.bal_id),
+      amount: parseNumber(tx.amount, 0),
+      net_profit: parseNumber(tx.net_profit, 0),
+      transaction_date: sanitizeNull(tx.transaction_date) ?? new Date().toISOString(),
+    };
     const newTx = await apiFetch<Transaction>("/api/transactions", {
       method: "POST",
-      body: JSON.stringify(tx),
+      body: JSON.stringify(payload),
     });
     this.notify();
     return newTx;
@@ -183,7 +248,6 @@ class ThriftStore {
   }
 
   // ── ANALYTICS & AGGREGATIONS ──────────────────────────────────────────────
-  // Dihitung di sisi client dari data yang sudah di-fetch, sama seperti sebelumnya
 
   public computeDashboardMetrics(
     products: Product[],
@@ -229,13 +293,13 @@ class ThriftStore {
     const averageMarginPercent =
       soldItemsWithHpp.length > 0
         ? Number(
-          (
-            soldItemsWithHpp.reduce((acc, p) => {
-              const profit = (p.sold_price || 0) - (p.hpp_allocated || 0);
-              return acc + (profit / (p.sold_price || 1)) * 100;
-            }, 0) / soldItemsWithHpp.length
-          ).toFixed(1)
-        )
+            (
+              soldItemsWithHpp.reduce((acc, p) => {
+                const profit = (p.sold_price || 0) - (p.hpp_allocated || 0);
+                return acc + (profit / (p.sold_price || 1)) * 100;
+              }, 0) / soldItemsWithHpp.length
+            ).toFixed(1)
+          )
         : 0;
 
     return {

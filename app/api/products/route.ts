@@ -7,6 +7,17 @@ function checkAuth(request: NextRequest): boolean {
   return !!cookie?.value;
 }
 
+const sanitizeNull = (val: any) => {
+  if (val === "" || val === undefined || val === null) return null;
+  return typeof val === "string" && val.trim() === "" ? null : val;
+};
+
+const parseNumber = (val: any, fallback: number | null = 0) => {
+  if (val === "" || val === null || val === undefined) return fallback;
+  const num = Number(val);
+  return isNaN(num) ? fallback : num;
+};
+
 // GET /api/products — ambil semua produk beserta data bal-nya
 export async function GET(request: NextRequest) {
   if (!checkAuth(request)) {
@@ -39,13 +50,15 @@ export async function POST(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createServerClient() as any;
 
+    const balId = sanitizeNull(body.bal_id);
+
     // Jika hpp_allocated tidak dikirim, ambil dari bal
     let hppAllocated = body.hpp_allocated;
-    if (!hppAllocated && body.bal_id) {
+    if ((hppAllocated === "" || hppAllocated === undefined || hppAllocated === null) && balId) {
       const { data: bal } = await supabase
         .from("bals")
         .select("hpp_per_pcs")
-        .eq("id", body.bal_id)
+        .eq("id", balId)
         .single();
       if (bal) hppAllocated = bal.hpp_per_pcs;
     }
@@ -54,15 +67,17 @@ export async function POST(request: NextRequest) {
       .from("products")
       .insert({
         sku: body.sku,
-        bal_id: body.bal_id ?? null,
+        bal_id: balId,
         name: body.name,
         category: body.category,
         grade: body.grade,
-        photo_url: body.photo_url ?? null,
-        selling_price: body.selling_price,
-        hpp_allocated: hppAllocated ?? 0,
+        photo_url: sanitizeNull(body.photo_url),
+        selling_price: parseNumber(body.selling_price, 0),
+        hpp_allocated: parseNumber(hppAllocated, 0),
         status: body.status ?? "READY",
-        notes: body.notes ?? null,
+        sold_price: parseNumber(body.sold_price, null),
+        sold_at: sanitizeNull(body.sold_at),
+        notes: sanitizeNull(body.notes),
       })
       .select("*, bal:bals(*)")
       .single();
