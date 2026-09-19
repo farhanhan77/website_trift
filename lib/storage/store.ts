@@ -108,15 +108,17 @@ class ThriftStore {
     return products.find((p) => p.id === id) ?? null;
   }
 
-  public async addProduct(
-    product: Omit<Product, "id" | "created_at">
-  ): Promise<Product> {
-    const newProduct = await apiFetch<Product>("/api/products", {
+  async addProduct(productData: any) {
+    const payload = {
+      ...productData,
+      price: productData.price === "" ? null : Number(productData.price),
+      stock: productData.stock === "" ? 0 : Number(productData.stock),
+    };
+
+    return await apiFetch("/api/products", {
       method: "POST",
-      body: JSON.stringify(product),
+      body: JSON.stringify(payload),
     });
-    this.notify();
-    return newProduct;
   }
 
   public async updateProduct(
@@ -227,13 +229,13 @@ class ThriftStore {
     const averageMarginPercent =
       soldItemsWithHpp.length > 0
         ? Number(
-            (
-              soldItemsWithHpp.reduce((acc, p) => {
-                const profit = (p.sold_price || 0) - (p.hpp_allocated || 0);
-                return acc + (profit / (p.sold_price || 1)) * 100;
-              }, 0) / soldItemsWithHpp.length
-            ).toFixed(1)
-          )
+          (
+            soldItemsWithHpp.reduce((acc, p) => {
+              const profit = (p.sold_price || 0) - (p.hpp_allocated || 0);
+              return acc + (profit / (p.sold_price || 1)) * 100;
+            }, 0) / soldItemsWithHpp.length
+          ).toFixed(1)
+        )
         : 0;
 
     return {
