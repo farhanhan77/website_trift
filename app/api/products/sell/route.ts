@@ -13,7 +13,7 @@ const sanitizeNull = (val: any) => {
   return typeof val === "string" && val.trim() === "" ? null : val;
 };
 
-const parseNumber = (val: any, fallback: number | null = 0) => {
+const parseNumber = (val: any, fallback: 0): number => {
   if (val === "" || val === null || val === undefined) return fallback;
   const num = Number(val);
   return isNaN(num) ? fallback : num;

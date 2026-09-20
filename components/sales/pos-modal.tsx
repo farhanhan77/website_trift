@@ -39,16 +39,21 @@ export function POSModal({ isOpen, onClose, product, onConfirmSale }: POSModalPr
 
   const priceDiff = priceNum - product.selling_price;
 
-  const handleConfirm = (e: React.FormEvent) => {
+  const handleConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (priceNum <= 0) {
       alert("Harga jual harus lebih besar dari 0");
       return;
     }
 
-    onConfirmSale(product.id, priceNum, new Date(transactionDate).toISOString());
-    fireSaleConfetti();
-    onClose();
+    try {
+      await onConfirmSale(product.id, priceNum, new Date(transactionDate).toISOString());
+      fireSaleConfetti();
+      onClose();
+    } catch (error: any) {
+      console.error("Gagal memproses transaksi:", error);
+      alert(error.message || "Gagal menjual produk");
+    }
   };
 
   return (
@@ -96,8 +101,8 @@ export function POSModal({ isOpen, onClose, product, onConfirmSale }: POSModalPr
               priceDiff < 0
                 ? `Diskon diberikan: -${formatIDR(Math.abs(priceDiff))}`
                 : priceDiff > 0
-                ? `Harga di atas target: +${formatIDR(priceDiff)}`
-                : "Sesuai target harga katalog"
+                  ? `Harga di atas target: +${formatIDR(priceDiff)}`
+                  : "Sesuai target harga katalog"
             }
             required
           />
@@ -130,9 +135,8 @@ export function POSModal({ isOpen, onClose, product, onConfirmSale }: POSModalPr
             </div>
             <div className="text-right">
               <span
-                className={`text-lg font-black ${
-                  profitResult.is_profitable ? "text-emerald-400" : "text-rose-400"
-                }`}
+                className={`text-lg font-black ${profitResult.is_profitable ? "text-emerald-400" : "text-rose-400"
+                  }`}
               >
                 {formatIDR(profitResult.net_profit)}
               </span>
